@@ -1,4 +1,8 @@
+
 # 🛒 Implementação de Autenticação no E-commerce
+
+
+
 
 ## 📋 **Checklist de Implementação**
 

@@ -101,7 +101,7 @@ export default function ProfilePage() {
         name: auth.user.name,
         email: auth.user.email,
         phone: auth.user.phone || '',
-        avatar: auth.user.avatar
+        avatar: auth.user.avatar || null
       });
     }
   }, [auth.user]);

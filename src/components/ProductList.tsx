@@ -99,8 +99,6 @@ export function ProductList({ products, onAddToCart, onAddToWishlist }: ProductL
             <ProductCard
               key={product.id}
               product={product}
-              onAddToCart={onAddToCart}
-              onAddToWishlist={onAddToWishlist}
             />
           ))}
         </div>
