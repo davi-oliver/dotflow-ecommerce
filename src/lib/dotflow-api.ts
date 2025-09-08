@@ -1,4 +1,4 @@
-import { Product, Customer, SalesAnalytics, ProductVariation, Category, Address, CustomerSession } from '@/types/dotflow';
+import { Product, Customer, ProductVariation, Category, Address, CustomerAddress, CustomerSession, OrdersResponse, CreditCard } from '@/types/dotflow';
 
 export interface OrderItem {
   product_id: number;
@@ -10,9 +10,10 @@ export interface OrderItem {
 export interface Order {
   id?: number;
   customer_id: number;
+  corporate_id: number;
   total_amount: number;
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
-  shipping_address: {
+  delivery_address: {
     street: string;
     number: string;
     complement?: string;
@@ -22,7 +23,7 @@ export interface Order {
     zip_code: string;
   };
   payment_method: string;
-  shipping_method: string;
+
   order_items: OrderItem[];
   created_at?: string;
   updated_at?: string;
@@ -105,6 +106,14 @@ export class DotFlowAPI {
     return this.request(`?resource=addresses&action=get&id=${addressId}`);
   }
 
+  async getAddressesByCustomer(customerId: number): Promise<{ addresses: CustomerAddress[] }> {
+    return this.request(`?resource=addresses&action=by_customer&customer_id=${customerId}`);
+  }
+
+  async getAddressesByType(customerId: number, type: string): Promise<{ addresses: CustomerAddress[] }> {
+    return this.request(`?resource=addresses&action=by_type&customer_id=${customerId}&type=${type}`);
+  }
+
   async createAddress(address: Partial<Address>): Promise<{ address: Address }> {
     return this.request('?resource=addresses&action=create', {
       method: 'POST',
@@ -112,10 +121,34 @@ export class DotFlowAPI {
     });
   }
 
+  async addAddressToCustomer(data: {
+    customer_id: number;
+    address_id: number;
+    address_type: 'home' | 'work' | 'shipping' | 'billing';
+    label: string;
+  }): Promise<{ success: boolean }> {
+    return this.request('?resource=addresses&action=add_to_customer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async setPrimaryAddress(addressId: number): Promise<{ success: boolean }> {
+    return this.request(`?resource=addresses&action=set_primary&id=${addressId}`, {
+      method: 'POST',
+    });
+  }
+
   async updateAddress(addressId: number, address: Partial<Address>): Promise<{ address: Address }> {
     return this.request(`?resource=addresses&action=update&id=${addressId}`, {
       method: 'POST',
       body: JSON.stringify(address),
+    });
+  }
+
+  async deleteAddress(addressId: number): Promise<{ success: boolean }> {
+    return this.request(`?resource=addresses&action=delete&id=${addressId}`, {
+      method: 'POST',
     });
   }
 
@@ -190,7 +223,7 @@ export class DotFlowAPI {
   }
 
   // Pedidos
-  async getOrders() {
+  async getOrders(): Promise<OrdersResponse> {
     return this.request('?resource=orders&action=list');
   }
 
@@ -205,6 +238,54 @@ export class DotFlowAPI {
     return this.request('?resource=orders&action=update', {
       method: 'PUT',
       body: JSON.stringify({ id: orderId, status }),
+    });
+  }
+
+  // Cartões de Crédito
+  async getCardsByCustomer(customerId: number): Promise<{ cards: CreditCard[] }> {
+    return this.request(`?resource=cards&action=list&customer_id=${customerId}`);
+  }
+
+  async getCard(cardId: number): Promise<{ card: CreditCard }> {
+    return this.request(`?resource=cards&action=get&id=${cardId}`);
+  }
+
+  async createCard(card: {
+    customer_id: number;
+    card_token: string;
+    card_type: 'credit' | 'debit';
+    brand: string;
+    last_four_digits: string;
+    holder_name: string;
+    expiry_month: number;
+    expiry_year: number;
+    gateway?: string;
+    gateway_card_id?: string;
+    fingerprint?: string;
+    is_default?: boolean;
+  }): Promise<{ card: CreditCard }> {
+    return this.request('?resource=cards&action=create', {
+      method: 'POST',
+      body: JSON.stringify(card),
+    });
+  }
+
+  async setDefaultCard(cardId: number): Promise<{ card: CreditCard }> {
+    return this.request(`?resource=cards&action=set_default&id=${cardId}`, {
+      method: 'POST',
+    });
+  }
+
+  async updateCard(cardId: number, card: Partial<CreditCard>): Promise<{ card: CreditCard }> {
+    return this.request(`?resource=cards&action=update&id=${cardId}`, {
+      method: 'POST',
+      body: JSON.stringify(card),
+    });
+  }
+
+  async deleteCard(cardId: number): Promise<{ card: CreditCard }> {
+    return this.request(`?resource=cards&action=delete&id=${cardId}`, {
+      method: 'POST',
     });
   }
 }

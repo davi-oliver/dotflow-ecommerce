@@ -1,0 +1,337 @@
+================================================================================
+                    ROTAS CRUD PARA ENDPOINTS DE CARTÕES
+================================================================================
+
+BASE URL: /api/gateway
+AUTENTICAÇÃO: Header x-api-key obrigatório
+RATE LIMIT: 1000 requests por minuto
+CORS: Habilitado
+
+================================================================================
+1. LISTAR CARTÕES DE UM CLIENTE
+================================================================================
+
+GET /api/gateway?resource=cards&action=list&customer_id={customer_id}
+
+Headers:
+x-api-key: {sua_api_key}
+
+Resposta de Sucesso (200):
+{
+  "cards": [
+    {
+      "id": 1,
+      "customer_id": 1,
+      "corporate_id": 1,
+      "card_token": "tok_123456789",
+      "card_type": "credit",
+      "brand": "visa",
+      "last_four_digits": "1234",
+      "holder_name": "João Silva",
+      "expiry_month": 12,
+      "expiry_year": 2025,
+      "is_default": true,
+      "is_active": true,
+      "gateway": "stripe",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+
+================================================================================
+2. OBTER CARTÃO ESPECÍFICO
+================================================================================
+
+GET /api/gateway?resource=cards&action=get&id={card_id}
+
+Headers:
+x-api-key: {sua_api_key}
+
+Resposta de Sucesso (200):
+{
+  "card": {
+    "id": 1,
+    "customer_id": 1,
+    "corporate_id": 1,
+    "card_token": "tok_123456789",
+    "card_type": "credit",
+    "brand": "visa",
+    "last_four_digits": "1234",
+    "holder_name": "João Silva",
+    "expiry_month": 12,
+    "expiry_year": 2025,
+    "is_default": true,
+    "is_active": true,
+    "gateway": "stripe",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+
+================================================================================
+3. CRIAR NOVO CARTÃO
+================================================================================
+
+POST /api/gateway?resource=cards&action=create
+
+Headers:
+x-api-key: {sua_api_key}
+Content-Type: application/json
+
+Body (JSON):
+{
+  "customer_id": 1,
+  "card_token": "tok_123456789",
+  "card_type": "credit",
+  "brand": "visa",
+  "last_four_digits": "1234",
+  "holder_name": "João Silva",
+  "expiry_month": 12,
+  "expiry_year": 2025,
+  "gateway": "stripe",
+  "gateway_card_id": "card_123456789",
+  "fingerprint": "fp_123456789",
+  "is_default": true
+}
+
+Resposta de Sucesso (200):
+{
+  "card": {
+    "id": 1,
+    "customer_id": 1,
+    "corporate_id": 1,
+    "card_token": "tok_123456789",
+    "card_type": "credit",
+    "brand": "visa",
+    "last_four_digits": "1234",
+    "holder_name": "João Silva",
+    "expiry_month": 12,
+    "expiry_year": 2025,
+    "is_default": true,
+    "is_active": true,
+    "gateway": "stripe",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+
+================================================================================
+4. ATUALIZAR CARTÃO
+================================================================================
+
+POST /api/gateway?resource=cards&action=update&id={card_id}
+
+Headers:
+x-api-key: {sua_api_key}
+Content-Type: application/json
+
+Body (JSON):
+{
+  "holder_name": "João Silva Santos",
+  "is_default": true
+}
+
+Resposta de Sucesso (200):
+{
+  "card": {
+    "id": 1,
+    "customer_id": 1,
+    "corporate_id": 1,
+    "card_token": "tok_123456789",
+    "card_type": "credit",
+    "brand": "visa",
+    "last_four_digits": "1234",
+    "holder_name": "João Silva Santos",
+    "expiry_month": 12,
+    "expiry_year": 2025,
+    "is_default": true,
+    "is_active": true,
+    "gateway": "stripe",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T12:00:00Z"
+  }
+}
+
+================================================================================
+5. EXCLUIR CARTÃO (SOFT DELETE)
+================================================================================
+
+POST /api/gateway?resource=cards&action=delete&id={card_id}
+
+Headers:
+x-api-key: {sua_api_key}
+
+Resposta de Sucesso (200):
+{
+  "card": {
+    "id": 1,
+    "customer_id": 1,
+    "corporate_id": 1,
+    "card_token": "tok_123456789",
+    "card_type": "credit",
+    "brand": "visa",
+    "last_four_digits": "1234",
+    "holder_name": "João Silva",
+    "expiry_month": 12,
+    "expiry_year": 2025,
+    "is_default": true,
+    "is_active": false,
+    "gateway": "stripe",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T12:00:00Z"
+  }
+}
+
+================================================================================
+6. DEFINIR CARTÃO COMO PADRÃO
+================================================================================
+
+POST /api/gateway?resource=cards&action=set_default&id={card_id}
+
+Headers:
+x-api-key: {sua_api_key}
+
+Resposta de Sucesso (200):
+{
+  "card": {
+    "id": 1,
+    "customer_id": 1,
+    "corporate_id": 1,
+    "card_token": "tok_123456789",
+    "card_type": "credit",
+    "brand": "visa",
+    "last_four_digits": "1234",
+    "holder_name": "João Silva",
+    "expiry_month": 12,
+    "expiry_year": 2025,
+    "is_default": true,
+    "is_active": true,
+    "gateway": "stripe",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T12:00:00Z"
+  }
+}
+
+================================================================================
+7. LISTAR CARTÕES POR CLIENTE (ALTERNATIVA)
+================================================================================
+
+GET /api/gateway?resource=cards&action=by_customer&customer_id={customer_id}
+
+Headers:
+x-api-key: {sua_api_key}
+
+Resposta: (mesma estrutura da ação 'list')
+
+================================================================================
+RESUMO DAS AÇÕES DISPONÍVEIS
+================================================================================
+
+| Ação        | Método | Descrição                                    |
+|-------------|--------|----------------------------------------------|
+| list        | GET    | Lista todos os cartões ativos de um cliente |
+| get         | GET    | Obtém um cartão específico por ID            |
+| create      | POST   | Cria um novo cartão                          |
+| update      | POST   | Atualiza dados de um cartão                  |
+| delete      | POST   | Remove um cartão (soft delete)               |
+| set_default | POST   | Define um cartão como padrão                 |
+| by_customer | GET    | Lista cartões por cliente (alternativa)      |
+
+================================================================================
+CAMPOS OBRIGATÓRIOS PARA CRIAÇÃO
+================================================================================
+
+{
+  "customer_id": "number (obrigatório)",
+  "card_token": "string (obrigatório)",
+  "card_type": "string (obrigatório) - 'credit' ou 'debit'",
+  "brand": "string (obrigatório) - 'visa', 'mastercard', etc.",
+  "last_four_digits": "string (obrigatório)",
+  "holder_name": "string (obrigatório)",
+  "expiry_month": "number (obrigatório) - 1-12",
+  "expiry_year": "number (obrigatório)",
+  "gateway": "string (opcional) - padrão: 'stripe'",
+  "is_default": "boolean (opcional) - padrão: false"
+}
+
+================================================================================
+BANDEIRAS SUPORTADAS
+================================================================================
+
+- visa
+- mastercard
+- elo
+- amex (American Express)
+- diners (Diners Club)
+- discover
+- jcb
+- hipercard
+- aura
+
+================================================================================
+CÓDIGOS DE ERRO COMUNS
+================================================================================
+
+400 - Bad Request: Dados inválidos ou campos obrigatórios ausentes
+401 - Unauthorized: API Key inválida ou ausente
+404 - Not Found: Cartão ou cliente não encontrado
+429 - Too Many Requests: Rate limit excedido
+500 - Internal Server Error: Erro interno do servidor
+
+================================================================================
+EXEMPLOS DE USO COM CURL
+================================================================================
+
+# Listar cartões
+curl -X GET "https://seu-dominio.com/api/gateway?resource=cards&action=list&customer_id=1" \
+  -H "x-api-key: sua_api_key"
+
+# Criar cartão
+curl -X POST "https://seu-dominio.com/api/gateway?resource=cards&action=create" \
+  -H "x-api-key: sua_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": 1,
+    "card_token": "tok_123456789",
+    "card_type": "credit",
+    "brand": "visa",
+    "last_four_digits": "1234",
+    "holder_name": "João Silva",
+    "expiry_month": 12,
+    "expiry_year": 2025,
+    "gateway": "stripe",
+    "is_default": true
+  }'
+
+# Atualizar cartão
+curl -X POST "https://seu-dominio.com/api/gateway?resource=cards&action=update&id=1" \
+  -H "x-api-key: sua_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "holder_name": "João Silva Santos",
+    "is_default": true
+  }'
+
+# Excluir cartão
+curl -X POST "https://seu-dominio.com/api/gateway?resource=cards&action=delete&id=1" \
+  -H "x-api-key: sua_api_key"
+
+# Definir como padrão
+curl -X POST "https://seu-dominio.com/api/gateway?resource=cards&action=set_default&id=1" \
+  -H "x-api-key: sua_api_key"
+
+================================================================================
+NOTAS IMPORTANTES
+================================================================================
+
+1. Todas as rotas requerem autenticação via header x-api-key
+2. O sistema usa soft delete (is_active = false) para exclusões
+3. Apenas um cartão pode ser padrão por cliente
+4. Dados sensíveis como CVV nunca são armazenados
+5. Apenas os últimos 4 dígitos do cartão são salvos
+6. Tokens são gerados pelo gateway de pagamento
+7. Rate limiting de 1000 requests por minuto por API key
+8. CORS está habilitado para todos os domínios
+
+================================================================================

@@ -10,7 +10,7 @@ export interface Customer {
   document_type?: string
   status: string
   auth_user_id: string
-  company_id: number
+  corporate_id: number
   created_at: string
   updated_at: string
 }

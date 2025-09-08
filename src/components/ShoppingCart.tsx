@@ -36,6 +36,9 @@ export function ShoppingCartSidebar() {
     if (cart.items.length === 0) return;
     
     setIsCheckingOut(true);
+    // Fechar o modal do carrinho imediatamente
+    cart.closeCart();
+    
     setTimeout(() => {
       router.push('/checkout');
       setIsCheckingOut(false);
