@@ -76,7 +76,7 @@ export default function OrdersPage() {
 
   // Obter status info
   const getStatusInfo = (status: string) => {
-    const statusMap: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+    const statusMap: Record<string, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {
       pending: { label: 'Aguardando Pagamento', color: 'text-yellow-600', bg: 'bg-yellow-100', icon: Clock },
       confirmed: { label: 'Pagamento Confirmado', color: 'text-blue-600', bg: 'bg-blue-100', icon: CheckCircle },
       preparing: { label: 'Preparando Pedido', color: 'text-orange-600', bg: 'bg-orange-100', icon: Package },

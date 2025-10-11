@@ -89,6 +89,21 @@ export class DotFlowAPI {
     return this.request('?resource=products&action=list');
   }
 
+  async getProductsByCategories(categoryIds: number[]): Promise<{ products: Product[] }> {
+    const categoriesParam = categoryIds.join(',');
+    return this.request(`?resource=products&action=list_by_categories&category_ids=${categoriesParam}`);
+  }
+
+  async getDeliveryMainProducts(): Promise<{ products: Product[] }> {
+    // Categorias principais: 1, 2, 3, 7, 8 (pizzas, bebidas, etc.)
+    return this.getProductsByCategories([1, 2, 3, 7, 8]);
+  }
+
+  async getDeliveryComplements(): Promise<{ products: Product[] }> {
+    // Categorias de complementos: 4, 5, 6 (bordas, adicionais, etc.)
+    return this.getProductsByCategories([4, 5, 6]);
+  }
+
   async getProductVariations(productId: number): Promise<{ variations: ProductVariation[] }> {
     return this.request(`?resource=product_variations&action=list&product_id=${productId}`);
   }

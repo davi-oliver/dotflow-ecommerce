@@ -3,15 +3,24 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product } from '@/types/dotflow';
 
-interface CartItem {
+export interface CartItemOptions {
+  flavors?: string[];
+  size?: string;
+  border?: string;
+  extras?: string[];
+}
+
+export interface CartItem {
   product: Product;
   quantity: number;
+  options?: CartItemOptions;
 }
 
 interface CartContextType {
   items: CartItem[];
   isOpen: boolean;
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, options?: CartItemOptions) => void;
+  addItem: (product: Product, quantity: number, options?: CartItemOptions) => void;
   updateQuantity: (productId: number, quantity: number) => void;
   removeFromCart: (productId: number) => void;
   clearCart: () => void;
@@ -44,20 +53,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('dotflow-cart', JSON.stringify(items));
   }, [items]);
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (product: Product, quantity: number = 1, options?: CartItemOptions) => {
     setItems(prevItems => {
-      const existingItem = prevItems.find(item => item.product.id === product.id);
+      const existingItem = prevItems.find(item => 
+        item.product.id === product.id && 
+        JSON.stringify(item.options) === JSON.stringify(options)
+      );
       
       if (existingItem) {
         return prevItems.map(item =>
-          item.product.id === product.id
+          item.product.id === product.id && JSON.stringify(item.options) === JSON.stringify(options)
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       } else {
-        return [...prevItems, { product, quantity }];
+        return [...prevItems, { product, quantity, options }];
       }
     });
+  };
+
+  const addItem = (product: Product, quantity: number, options?: CartItemOptions) => {
+    addToCart(product, quantity, options);
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
@@ -106,6 +122,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     items,
     isOpen,
     addToCart,
+    addItem,
     updateQuantity,
     removeFromCart,
     clearCart,

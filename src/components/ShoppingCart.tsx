@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { CheckoutService } from '@/services/checkoutService';
 import { 
   X, 
   ShoppingCart, 
@@ -14,15 +16,13 @@ import {
   Lock,
   Shield,
   CreditCard,
-  Truck,
-  CheckCircle,
-  Sparkles,
-  AlertCircle
+  Truck
 } from 'lucide-react';
 
 export function ShoppingCartSidebar() {
   const router = useRouter();
   const cart = useCart();
+  const { customer, isAuthenticated, isLoading } = useAuth();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const formatPrice = (price: number) => {
@@ -32,17 +32,43 @@ export function ShoppingCartSidebar() {
     }).format(price);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.items.length === 0) return;
     
-    setIsCheckingOut(true);
-    // Fechar o modal do carrinho imediatamente
-    cart.closeCart();
+    // Verificar se está carregando a autenticação
+    if (isLoading) {
+      return;
+    }
     
-    setTimeout(() => {
-      router.push('/checkout');
+    // Se não estiver autenticado, redirecionar para login
+    if (!isAuthenticated) {
+      cart.closeCart();
+      // Salvar o carrinho no localStorage para restaurar após login
+      localStorage.setItem('dotflow-cart-backup', JSON.stringify(cart.items));
+      // Redirecionar para login com returnUrl
+      const currentPath = window.location.pathname;
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}&checkout=true`);
+      return;
+    }
+    
+    setIsCheckingOut(true);
+    
+    try {
+      // Fechar o modal do carrinho imediatamente
+      cart.closeCart();
+      
+      // Redirecionar para checkout externo
+      await CheckoutService.redirectToExternalCheckout(
+        cart.items,
+        customer?.id,
+        customer?.name,
+        customer?.phone
+      );
+    } catch (error) {
+      console.error('❌ Erro no checkout:', error);
+      alert('Erro ao processar checkout. Tente novamente.');
       setIsCheckingOut(false);
-    }, 500);
+    }
   };
 
   const getDiscountPercentage = (originalPrice: number, offerPrice: number) => {
@@ -118,6 +144,32 @@ export function ShoppingCartSidebar() {
                         <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm line-clamp-2">
                           {item.product.name}
                         </h3>
+                        
+                        {/* Delivery Options */}
+                        {item.options && (
+                          <div className="mt-2 space-y-1">
+                            {item.options.flavors && item.options.flavors.length > 0 && (
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Sabores:</span> {item.options.flavors.join(', ')}
+                              </div>
+                            )}
+                            {item.options.size && (
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Tamanho:</span> {item.options.size}
+                              </div>
+                            )}
+                            {item.options.border && item.options.border !== 'tradicional' && (
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Borda:</span> {item.options.border}
+                              </div>
+                            )}
+                            {item.options.extras && item.options.extras.length > 0 && (
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                <span className="font-medium">Adicionais:</span> {item.options.extras.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        )}
                         
                         {/* Price */}
                         <div className="flex items-center space-x-2 mt-1">
@@ -203,16 +255,36 @@ export function ShoppingCartSidebar() {
                 </div>
               </div>
 
+              {/* Mensagem para usuário não logado */}
+              {!isAuthenticated && !isLoading && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
+                    🔐 Faça login para finalizar sua compra de forma segura
+                  </p>
+                </div>
+              )}
+
               {/* Checkout Button */}
               <button
                 onClick={handleCheckout}
-                disabled={isCheckingOut}
+                disabled={isCheckingOut || isLoading}
                 className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 px-6 rounded-xl hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 font-semibold flex items-center justify-center space-x-2"
               >
-                {isCheckingOut ? (
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Verificando...</span>
+                  </>
+                ) : isCheckingOut ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     <span>Redirecionando...</span>
+                  </>
+                ) : !isAuthenticated ? (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    <span>Fazer Login para Finalizar</span>
+                    <ArrowRight className="w-5 h-5" />
                   </>
                 ) : (
                   <>

@@ -1,14 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff, Mail, Lock, User, Phone, Check } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
+import { CartItem } from '@/contexts/CartContext';
+import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register } = useAuth();
+  const cart = useCart();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -22,6 +26,10 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // Verificar se há parâmetros de redirecionamento
+  const redirectUrl = searchParams.get('redirect');
+  const isCheckoutFlow = searchParams.get('checkout') === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +72,32 @@ export default function RegisterPage() {
         document_type: 'CPF'
       });
 
-      // Redirecionar para página inicial
-      router.push('/');
+      // Restaurar carrinho se estiver no fluxo de checkout
+      if (isCheckoutFlow) {
+        const cartBackup = localStorage.getItem('dotflow-cart-backup');
+        if (cartBackup) {
+          try {
+            const backupItems: CartItem[] = JSON.parse(cartBackup);
+            // Limpar carrinho atual e restaurar backup
+            cart.clearCart();
+            backupItems.forEach((item: CartItem) => {
+              cart.addToCart(item.product, item.quantity, item.options);
+            });
+            // Remover backup do localStorage
+            localStorage.removeItem('dotflow-cart-backup');
+            console.log('✅ Carrinho restaurado após registro');
+          } catch (error) {
+            console.warn('⚠️ Erro ao restaurar carrinho:', error);
+          }
+        }
+      }
+
+      // Redirecionar baseado nos parâmetros
+      if (redirectUrl) {
+        router.push(decodeURIComponent(redirectUrl));
+      } else {
+        router.push('/');
+      }
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta');
@@ -91,6 +123,16 @@ export default function RegisterPage() {
             <p className="text-lg text-gray-600">
               Registre-se para começar a comprar
             </p>
+            
+            {/* Mensagem para fluxo de checkout */}
+            {isCheckoutFlow && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg max-w-md mx-auto">
+                <p className="text-sm text-green-800">
+                  🛒 <strong>Finalize sua compra!</strong><br />
+                  Crie sua conta para continuar com o checkout de forma segura.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -362,7 +404,7 @@ export default function RegisterPage() {
                 <p className="text-sm text-gray-600">
                   Já tem uma conta?{' '}
                   <Link
-                    href="/auth/login"
+                    href={`/auth/login${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}${isCheckoutFlow ? `${redirectUrl ? '&' : '?'}checkout=true` : ''}`}
                     className="font-medium text-blue-600 hover:text-blue-500"
                   >
                     Faça login aqui
@@ -374,5 +416,25 @@ export default function RegisterPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-blue-600 bg-blue-100 rounded-lg">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Carregando...
+          </div>
+        </div>
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 } 

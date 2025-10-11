@@ -1,14 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
+import { CartItem } from '@/contexts/CartContext';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
+  const cart = useCart();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -16,6 +20,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Verificar se há parâmetros de redirecionamento
+  const redirectUrl = searchParams.get('redirect');
+  const isCheckoutFlow = searchParams.get('checkout') === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +47,32 @@ export default function LoginPage() {
       // Fazer login usando o AuthContext
       await login(formData.email, formData.password);
 
-      // Redirecionar para página inicial
-      router.push('/');
+      // Restaurar carrinho se estiver no fluxo de checkout
+      if (isCheckoutFlow) {
+        const cartBackup = localStorage.getItem('dotflow-cart-backup');
+        if (cartBackup) {
+          try {
+            const backupItems: CartItem[] = JSON.parse(cartBackup);
+            // Limpar carrinho atual e restaurar backup
+            cart.clearCart();
+            backupItems.forEach((item: CartItem) => {
+              cart.addToCart(item.product, item.quantity, item.options);
+            });
+            // Remover backup do localStorage
+            localStorage.removeItem('dotflow-cart-backup');
+            console.log('✅ Carrinho restaurado após login');
+          } catch (error) {
+            console.warn('⚠️ Erro ao restaurar carrinho:', error);
+          }
+        }
+      }
+
+      // Redirecionar baseado nos parâmetros
+      if (redirectUrl) {
+        router.push(decodeURIComponent(redirectUrl));
+      } else {
+        router.push('/');
+      }
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login');
@@ -66,6 +98,16 @@ export default function LoginPage() {
             <p className="text-lg text-gray-600">
               Acesse sua conta para continuar comprando
             </p>
+            
+            {/* Mensagem para fluxo de checkout */}
+            {isCheckoutFlow && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
+                <p className="text-sm text-blue-800">
+                  🛒 <strong>Finalize sua compra!</strong><br />
+                  Faça login para continuar com o checkout de forma segura.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -229,7 +271,7 @@ export default function LoginPage() {
                 <p className="text-sm text-gray-600">
                   Não tem uma conta?{' '}
                   <Link
-                    href="/auth/register"
+                    href={`/auth/register${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}${isCheckoutFlow ? `${redirectUrl ? '&' : '?'}checkout=true` : ''}`}
                     className="font-medium text-blue-600 hover:text-blue-500"
                   >
                     Registre-se aqui
@@ -241,5 +283,25 @@ export default function LoginPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-blue-600 bg-blue-100 rounded-lg">
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Carregando...
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 } 
