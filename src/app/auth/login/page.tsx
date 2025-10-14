@@ -61,6 +61,9 @@ function LoginForm() {
             // Remover backup do localStorage
             localStorage.removeItem('dotflow-cart-backup');
             console.log('✅ Carrinho restaurado após login');
+            
+            // Salvar flag para continuar checkout após redirecionamento
+            localStorage.setItem('dotflow-continue-checkout', 'true');
           } catch (error) {
             console.warn('⚠️ Erro ao restaurar carrinho:', error);
           }

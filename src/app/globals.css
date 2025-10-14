@@ -194,3 +194,13 @@ body {
 .light body {
   background-color: #ffffff !important;
 }
+
+/* Scrollbar personalizada */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

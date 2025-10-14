@@ -6,6 +6,7 @@ export interface CheckoutParams {
   currency: string;
   description: string;
   customer_id: string | null;
+  company_id: number;
   meta_customer_name: string;
   meta_customer_phone: string;
   meta_order_id: string;
@@ -13,7 +14,11 @@ export interface CheckoutParams {
   meta_cart_total: string;
   meta_source: string;
   meta_campaign: string;
-  [key: string]: string | number | null; // Para meta_item_X
+  meta_coupon_code?: string;
+  meta_coupon_discount?: string;
+  meta_coupon_type?: string;
+  meta_discount_amount?: string;
+  [key: string]: string | number | null; // Para meta_item_X, meta_product_id_X, meta_product_price_X, meta_product_qty_X
 }
 
 export class CheckoutService {
@@ -28,7 +33,12 @@ export class CheckoutService {
     cartItems: CartItem[],
     customerId?: number,
     customerName?: string,
-    customerPhone?: string
+    customerPhone?: string,
+    couponInfo?: {
+      code: string;
+      discount: number;
+      type: 'percentage' | 'fixed';
+    }
   ): Promise<{ orderId: string; checkoutUrl: string }> {
     try {
       // 1. Criar o pedido na API DotFlow
@@ -40,7 +50,8 @@ export class CheckoutService {
         orderData.order.id || orderData.order.order_number,
         customerId,
         customerName,
-        customerPhone
+        customerPhone,
+        couponInfo
       );
 
       // 3. Gerar URL de checkout externo
@@ -150,8 +161,8 @@ export class CheckoutService {
       if (item.options.flavors && item.options.flavors.length > 0) {
         parts.push(`Sabores: ${item.options.flavors.join(', ')}`);
       }
-      if (item.options.border && item.options.border !== 'tradicional') {
-        parts.push(`Borda: ${item.options.border}`);
+      if (item.options.border && item.options.border.name !== 'Tradicional') {
+        parts.push(`Borda: ${item.options.border.name}`);
       }
       if (item.options.extras && item.options.extras.length > 0) {
         parts.push(`Adicionais: ${item.options.extras.join(', ')}`);
@@ -169,30 +180,119 @@ export class CheckoutService {
     orderId: string | number,
     customerId?: number,
     customerName?: string,
-    customerPhone?: string
+    customerPhone?: string,
+    couponInfo?: {
+      code: string;
+      discount: number;
+      type: 'percentage' | 'fixed';
+    }
   ): CheckoutParams {
     const totalAmount = cartItems.reduce((total, item) => {
-      const price = item.product.price_offer || item.product.price;
-      return total + (price * item.quantity);
+      let itemTotal = 0;
+      
+      // Preço do produto principal
+      const productPrice = item.product.price_offer || item.product.price;
+      itemTotal += productPrice * item.quantity;
+      
+      // Adicionar preço da borda (se houver)
+      if (item.options?.border && item.options.border.name !== 'Tradicional') {
+        itemTotal += (item.options.border.price || 0) * item.quantity;
+      }
+      
+      // Adicionar preços dos adicionais (se houver)
+      if (item.options?.extras && item.options.extras.length > 0) {
+        item.options.extras.forEach(extra => {
+          itemTotal += (extra.price || 0) * item.quantity;
+        });
+      }
+      
+      return total + itemTotal;
     }, 0);
 
+    // Calcular desconto do cupom (se aplicável)
+    let discountAmount = 0;
+    let finalAmount = totalAmount;
+    
+    if (couponInfo) {
+      if (couponInfo.type === 'percentage') {
+        discountAmount = (totalAmount * couponInfo.discount) / 100;
+      } else {
+        discountAmount = Math.min(couponInfo.discount, totalAmount);
+      }
+      finalAmount = totalAmount - discountAmount;
+    }
+
     const params: CheckoutParams = {
-      amount: Math.round(totalAmount * 100), // Converter para centavos
+      amount: Math.round(finalAmount * 100), // Converter para centavos (valor final com desconto)
       currency: 'brl',
       description: `Carrinho com ${cartItems.length} ${cartItems.length === 1 ? 'item' : 'itens'}`,
       customer_id: customerId?.toString() || null,
+      company_id: appConfig.corporateId,
       meta_customer_name: customerName || 'Cliente',
       meta_customer_phone: customerPhone || '(11) 99999-9999',
       meta_order_id: orderId.toString(),
       meta_items_count: cartItems.length,
-      meta_cart_total: totalAmount.toFixed(2),
+      meta_cart_total: totalAmount.toFixed(2), // Subtotal sem desconto
       meta_source: 'ecommerce',
       meta_campaign: 'black_friday'
     };
 
-    // Adicionar itens como meta_item_X
-    cartItems.forEach((item, index) => {
-      params[`meta_item_${index + 1}`] = `${item.product.name} (Qtd: ${item.quantity})`;
+    // Adicionar informações do cupom (se aplicável)
+    if (couponInfo) {
+      params.meta_coupon_code = couponInfo.code;
+      params.meta_coupon_discount = couponInfo.discount.toString();
+      params.meta_coupon_type = couponInfo.type;
+      params.meta_discount_amount = discountAmount.toFixed(2);
+    }
+
+    // Adicionar itens como meta_item_X e dados do produto
+    let itemNumber = 1;
+    
+    cartItems.forEach((item) => {
+      const productPrice = item.product.price_offer || item.product.price;
+      
+      // Pizza principal
+      params[`meta_item_${itemNumber}`] = `${item.product.name} (Qtd: ${item.quantity})`;
+      params[`meta_product_id_${itemNumber}`] = item.product.id;
+      params[`meta_product_price_${itemNumber}`] = productPrice.toFixed(2);
+      params[`meta_product_qty_${itemNumber}`] = item.quantity;
+      
+      // Campos específicos para pizzas
+      if (item.options) {
+        if (item.options.size) {
+          params[`meta_pizza_size_${itemNumber}`] = item.options.size;
+        }
+        if (item.options.flavors && item.options.flavors.length > 0) {
+          const flavorNames = item.options.flavors.map(f => f.name).join(', ');
+          params[`meta_pizza_flavors_${itemNumber}`] = flavorNames;
+          // Identificar se é metade metade
+          if (item.options.flavors.length === 2) {
+            params[`meta_pizza_type_${itemNumber}`] = 'metade_metade';
+          }
+        }
+      }
+      
+      itemNumber++;
+      
+      // Borda como produto separado
+      if (item.options?.border && item.options.border.name !== 'Tradicional') {
+        params[`meta_item_${itemNumber}`] = `Borda ${item.options.border.name} (Qtd: ${item.quantity})`;
+        params[`meta_product_id_${itemNumber}`] = item.options.border.id;
+        params[`meta_product_price_${itemNumber}`] = item.options.border.price?.toFixed(2) || '0.00';
+        params[`meta_product_qty_${itemNumber}`] = item.quantity;
+        itemNumber++;
+      }
+      
+      // Adicionais como produtos separados
+      if (item.options?.extras && item.options.extras.length > 0) {
+        item.options.extras.forEach((extra) => {
+          params[`meta_item_${itemNumber}`] = `${extra.name} (Qtd: ${item.quantity})`;
+          params[`meta_product_id_${itemNumber}`] = extra.id;
+          params[`meta_product_price_${itemNumber}`] = extra.price?.toFixed(2) || '0.00';
+          params[`meta_product_qty_${itemNumber}`] = item.quantity;
+          itemNumber++;
+        });
+      }
     });
 
     return params;
@@ -220,14 +320,20 @@ export class CheckoutService {
     cartItems: CartItem[],
     customerId?: number,
     customerName?: string,
-    customerPhone?: string
+    customerPhone?: string,
+    couponInfo?: {
+      code: string;
+      discount: number;
+      type: 'percentage' | 'fixed';
+    }
   ): Promise<void> {
     try {
       const { checkoutUrl } = await this.createOrderAndGetCheckoutParams(
         cartItems,
         customerId,
         customerName,
-        customerPhone
+        customerPhone,
+        couponInfo
       );
 
       console.log('🔄 Redirecionando para checkout externo:', checkoutUrl);

@@ -4,10 +4,11 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { Product } from '@/types/dotflow';
 
 export interface CartItemOptions {
-  flavors?: string[];
-  size?: string;
-  border?: string;
-  extras?: string[];
+  size?: 'P' | 'M' | 'G';  // Tamanho da pizza
+  flavors?: Product[];     // Array de produtos (para metades de sabores)
+  border?: Product;        // Produto de borda (opcional)
+  extras?: Product[];      // Array de produtos adicionais
+  quantity?: number;       // Quantidade do item (já está no CartItem, mas mantido por compatibilidade)
 }
 
 export interface CartItem {
@@ -104,9 +105,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const getTotalPrice = () => {
+    // Tabela de preços por tamanho
+    const sizePrices = {
+      classica: { P: 32.90, M: 40.90, G: 49.90 },
+      especial: { P: 36.90, M: 45.90, G: 54.90 }
+    };
+    
     return items.reduce((total, item) => {
-      const price = item.product.price_offer || item.product.price;
-      return total + (price * item.quantity);
+      let pizzaPrice = item.product.price_offer || item.product.price;
+      
+      // Se o produto é uma pizza (categories 8, 9, 10) e tem tamanho definido
+      const isPizza = item.product.category_id && [8, 9, 10].includes(item.product.category_id);
+      
+      if (isPizza && item.options?.size) {
+        // Determinar se tem sabor especial
+        const hasEspecial = item.options.flavors?.some(f => f.category_id === 9) || 
+                           item.product.category_id === 9;
+        const priceCategory = hasEspecial ? 'especial' : 'classica';
+        
+        // Usar preço da tabela baseado no tamanho e categoria
+        pizzaPrice = sizePrices[priceCategory][item.options.size];
+      }
+      
+      // Calcular preço adicional das opções (borda e extras)
+      let optionsPrice = 0;
+      
+      if (item.options) {
+        // Preço da borda
+        if (item.options.border) {
+          optionsPrice += item.options.border.price_offer || item.options.border.price;
+        }
+        
+        // Preço dos adicionais
+        if (item.options.extras && item.options.extras.length > 0) {
+          optionsPrice += item.options.extras.reduce(
+            (sum, extra) => sum + (extra.price_offer || extra.price), 
+            0
+          );
+        }
+      }
+      
+      return total + ((pizzaPrice + optionsPrice) * item.quantity);
     }, 0);
   };
 

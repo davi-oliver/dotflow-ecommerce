@@ -3,34 +3,63 @@
 import { useState, useEffect } from 'react';
 import { Product, Category } from '@/types/dotflow';
 import { dotflowAPI } from '@/lib/dotflow-api';
+import { useProductFilters } from '@/hooks/useProductFilters';
 import { DeliveryHeader } from '@/components/delivery/DeliveryHeader';
+import { RestaurantInfo } from '@/components/delivery/RestaurantInfo';
+import { HighlightsSection } from '@/components/delivery/HighlightsSection';
 import { CategoryTabs } from '@/components/delivery/CategoryTabs';
 import { ProductGrid } from '@/components/delivery/ProductGrid';
 import { ProductModal } from '@/components/delivery/ProductModal';
 import { CartFloatingButton } from '@/components/delivery/CartFloatingButton';
+import { DesktopSidebar } from '@/components/delivery/DesktopSidebar';
+import { SearchBar } from '@/components/delivery/SearchBar';
 import { useCart } from '@/contexts/CartContext';
 
 export default function DeliveryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const cart = useCart();
 
-  // Categorias específicas para pizzaria
-  const pizzaCategories = [
-    { id: 'all', name: 'Todas', icon: '🍕' },
-    { id: 'classicas', name: 'Clássicas', icon: '🍕' },
-    { id: 'doces', name: 'Doces', icon: '🍰' },
-    { id: 'especiais', name: 'Especiais', icon: '⭐' },
-  ];
+  // Hook personalizado para filtragem
+  const {
+    selectedCategory,
+    searchTerm,
+    categories: pizzaCategories,
+    filteredProducts,
+    setCategory,
+    setSearchTerm,
+  } = useProductFilters(products);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  // Verificar se deve continuar checkout após login
+  useEffect(() => {
+    const shouldContinueCheckout = localStorage.getItem('dotflow-continue-checkout');
+    if (shouldContinueCheckout === 'true' && cart.getTotalItems() > 0) {
+      // Remover flag
+      localStorage.removeItem('dotflow-continue-checkout');
+      
+      // Pequeno delay para garantir que o carrinho foi restaurado
+      setTimeout(() => {
+        console.log('🔄 Continuando checkout após login...');
+        cart.openCart();
+        
+        // Auto-iniciar checkout (aguardar mais um pouco)
+        setTimeout(() => {
+          // O usuário pode revisar o carrinho antes de finalizar
+          // Se quiser auto-finalizar, descomente a linha abaixo:
+          // document.querySelector('[data-checkout-button]')?.click();
+        }, 1000);
+      }, 500);
+    }
+  }, [cart]);
+  
   const loadData = async () => {
     try {
       setLoading(true);
@@ -49,33 +78,6 @@ export default function DeliveryPage() {
     }
   };
 
-  const filteredProducts = products.filter(product => {
-    if (selectedCategory === 'all') return true;
-    
-    // Mapear categorias baseado no nome do produto
-    const productName = product.name.toLowerCase();
-    
-    switch (selectedCategory) {
-      case 'classicas':
-        return productName.includes('margherita') || 
-               productName.includes('pepperoni') || 
-               productName.includes('portuguesa') ||
-               productName.includes('calabresa') ||
-               productName.includes('napolitana');
-      case 'doces':
-        return productName.includes('chocolate') || 
-               productName.includes('morango') || 
-               productName.includes('banana') ||
-               productName.includes('doce');
-      case 'especiais':
-        return productName.includes('especial') || 
-               productName.includes('premium') || 
-               productName.includes('gourmet') ||
-               productName.includes('artesanal');
-      default:
-        return true;
-    }
-  });
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
@@ -120,31 +122,39 @@ export default function DeliveryPage() {
 
   return (
     <>
-      <DeliveryHeader />
+      <DesktopSidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            🍕 Cardápio Digital
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
-            Pizzas artesanais feitas com ingredientes frescos
-          </p>
+      <DeliveryHeader onMenuClick={() => setSidebarOpen(true)} />
+      <RestaurantInfo />
+      <HighlightsSection 
+        products={products}
+        onProductSelect={handleProductSelect}
+      />
+      
+      <main className="bg-gray-900 dark:bg-black min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12">
+          {/* Search Bar */}
+          <SearchBar 
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+          />
+
+          {/* Category Tabs */}
+          <CategoryTabs 
+            categories={pizzaCategories}
+            selectedCategory={selectedCategory}
+            onCategorySelect={setCategory}
+          />
+
+          {/* Products Grid */}
+          <ProductGrid 
+            products={filteredProducts}
+            onProductSelect={handleProductSelect}
+          />
         </div>
-
-        {/* Category Tabs */}
-        <CategoryTabs 
-          categories={pizzaCategories}
-          selectedCategory={selectedCategory}
-          onCategorySelect={setSelectedCategory}
-        />
-
-        {/* Products Grid */}
-        <ProductGrid 
-          products={filteredProducts}
-          onProductSelect={handleProductSelect}
-        />
 
         {/* Floating Cart Button */}
         <CartFloatingButton 

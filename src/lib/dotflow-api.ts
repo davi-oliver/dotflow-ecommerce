@@ -1,4 +1,5 @@
 import { Product, Customer, ProductVariation, Category, Address, CustomerAddress, CustomerSession, OrdersResponse, CreditCard } from '@/types/dotflow';
+import { mockProducts, mockCategories } from '@/data/mockProducts';
 
 export interface OrderItem {
   product_id: number;
@@ -86,7 +87,12 @@ export class DotFlowAPI {
 
   // Produtos
   async getProducts(): Promise<{ products: Product[] }> {
-    return this.request('?resource=products&action=list');
+    try {
+      return await this.request('?resource=products&action=list');
+    } catch (error) {
+      console.warn('⚠️ API não disponível, usando dados mock:', error);
+      return { products: mockProducts };
+    }
   }
 
   async getProductsByCategories(categoryIds: number[]): Promise<{ products: Product[] }> {
@@ -109,7 +115,12 @@ export class DotFlowAPI {
   }
 
   async getCategories(): Promise<{ categories: Category[] }> {
-    return this.request('?resource=categories&action=list');
+    try {
+      return await this.request('?resource=categories&action=list');
+    } catch (error) {
+      console.warn('⚠️ API não disponível, usando categorias mock:', error);
+      return { categories: mockCategories };
+    }
   }
 
   // Endereços
