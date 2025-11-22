@@ -23,6 +23,8 @@ export function CategoryTabs({ categories, selectedCategory, onCategorySelect }:
             className={`flex items-center gap-2 px-4 py-2 lg:px-6 lg:py-3 rounded-full font-medium transition-all duration-200 whitespace-nowrap ${
               selectedCategory === category.id
                 ? 'bg-red-600 text-white shadow-lg lg:shadow-xl transform lg:scale-105'
+                : category.id === 'all'
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 lg:hover:bg-blue-300'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 lg:hover:bg-gray-300'
             }`}
           >

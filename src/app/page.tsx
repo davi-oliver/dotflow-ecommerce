@@ -65,7 +65,7 @@ export default function Home() {
           console.log(`🔥 Mais Vendidos: ${Math.min(Math.max(validProducts.length - 6, 0), 8)} produtos`);
           console.log('🎨 Produtos para renderizar:', validProducts);
           
-          // Forçar re-render
+          // Forçar re-render 
           setTimeout(() => {
             console.log('🔄 Forçando re-render...');
             setProducts([...validProducts]);

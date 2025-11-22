@@ -24,8 +24,8 @@ export class ProductFilterService {
   private static pizzaCategories: PizzaCategory[] = [
     {
       id: 'all',
-      name: 'Todas',
-      icon: '🍕',
+      name: 'Seções',
+      icon: '📋',
       keywords: [],
     },
     {
@@ -256,9 +256,15 @@ export class ProductFilterService {
 
   /**
    * Retorna as categorias disponíveis
+   * Exclui categorias que não devem aparecer nas tabs: adicionais, bordas-classicas, bordas-especiais
    */
   static getCategories(): PizzaCategory[] {
-    return this.pizzaCategories;
+    // Categorias que não devem aparecer nas tabs de filtro
+    const hiddenCategories = ['adicionais', 'bordas-classicas', 'bordas-especiais'];
+    
+    return this.pizzaCategories.filter(
+      category => !hiddenCategories.includes(category.id)
+    );
   }
 
   /**

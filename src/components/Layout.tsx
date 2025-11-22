@@ -13,11 +13,12 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const isDeliveryRoute = pathname.startsWith('/delivery');
+  const isOrderTrackingRoute = pathname.startsWith('/order-tracking');
 
   return (
     <CartProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        {!isDeliveryRoute && <Header />}
+        {!isDeliveryRoute && !isOrderTrackingRoute && <Header />}
         
         <main>
           {children}
